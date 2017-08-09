@@ -1,0 +1,55 @@
+---
+# up to now only for centos/redhat
+
+- name: install nfs utils package on redhat
+  yum:
+    name: nfs-utils
+    state: present
+  when: ansible_os_family == "RedHat"
+
+
+- name: Ensure rpcbind is running.
+  service:
+    name: rpcbind
+    state: started
+    enabled: yes
+
+- stat: path=/etc/exports
+  register: exportsfile
+
+# the following exports file is also used by zfs
+- stat: path=/etc/dfs/sharetab
+  register: sharetabfile
+
+#- debug:
+#    msg: "exportsfile is  {{ exportsfile.stat.size }} bytes,
+#    # sharetabfile is {{ sharetabfile.stat.size }} bytes"
+#  when: exportsfile.stat.exists
+
+- name: Ensure nfs is running if exports files are bigger than 0 byte
+  service:
+    name: "{{ nfs_service_name }}"
+    state: started
+    enabled: yes
+  when: exportsfile.stat.exists and exportsfile.stat.size > 0
+        or
+        sharetabfile.stat.exists and sharetabfile.stat.size > 0
+
+- name: Mount NFS share(s)
+  become: yes
+  mount:
+    fstype: nfs4
+    name: "{{ item.path }}"
+    opts: "{{ item.opts | default(nfs_mount_opts) }}"
+    src: "{{ item.location }}"
+    state: mounted
+  with_items: "{{ nfs_share_mounts }}"
+
+- name: Ensure that the NFS mount points exist
+  file:
+    path:  '{{ item.path }}'
+    owner: '{{ item.owner | d("root") }}'
+    group: '{{ item.group | d("root") }}'
+    mode:  '{{ item.mode  | d("0755") }}'
+    state: 'directory'
+  with_items: "{{ nfs_share_mounts }}"

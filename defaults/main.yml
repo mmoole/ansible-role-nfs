@@ -1,0 +1,4 @@
+# This directory contains defaults for variables used in roles
+
+# name of the nfs service running on the host. usually 'nfs'
+nfs_service_name: nfs
