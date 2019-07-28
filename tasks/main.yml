@@ -1,7 +1,7 @@
 ---
 # up to now only for centos/redhat
 
-- name: install nfs utils package on redhat
+- name: install nfs utils package on RedHat
   yum:
     name: nfs-utils
     state: present
@@ -31,7 +31,9 @@
     name: "{{ nfs_service_name }}"
     state: started
     enabled: yes
-  when: exportsfile.stat.exists and exportsfile.stat.size > 0
+  when: nfs_share_mounts is defined
+        or
+        exportsfile.stat.exists and exportsfile.stat.size > 0
         or
         sharetabfile.stat.exists and sharetabfile.stat.size > 0
 
