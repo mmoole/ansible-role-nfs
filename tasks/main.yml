@@ -52,6 +52,5 @@
     path:  '{{ item.path }}'
     owner: '{{ item.owner | d("root") }}'
     group: '{{ item.group | d("root") }}'
-    mode:  '{{ item.mode  | d("0755") }}'
     state: 'directory'
   with_items: "{{ nfs_share_mounts }}"
