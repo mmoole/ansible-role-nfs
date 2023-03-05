@@ -15,7 +15,7 @@ Variables with examples:
 
 ```yml
 # name of the nfs service running on the host. usually 'nfs'
-nfs_service_name: nfs
+nfs_service_name: nfs-server
 
 # defaults for nfs-mounts:
 # List of NFS shares

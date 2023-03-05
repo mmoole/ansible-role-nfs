@@ -1,45 +1,48 @@
 ---
 # up to now only for centos/redhat
 
-- name: install nfs utils package on RedHat
-  yum:
+- name: Install nfs utils package on RedHat
+  ansible.builtin.yum:
     name: nfs-utils
     state: present
   when: ansible_os_family == "RedHat"
 
-
 - name: Ensure rpcbind is running.
-  service:
+  ansible.builtin.service:
     name: rpcbind
     state: started
     enabled: yes
 
-- stat: path=/etc/exports
+- name: Stat the exports file /etc/exports
+  ansible.builtin.stat:
+    path: /etc/exports
   register: exportsfile
 
-# the following exports file is also used by zfs
-- stat: path=/etc/dfs/sharetab
-  register: sharetabfile
+- name: Stat the exports file /etc/exports.d/zfs.exports which is also used by openzfs
+  ansible.builtin.stat:
+    path: /etc/exports.d/zfs.exports
+  register: zfsexportsfile
 
-#- debug:
+# - debug:
 #    msg: "exportsfile is  {{ exportsfile.stat.size }} bytes,
-#    # sharetabfile is {{ sharetabfile.stat.size }} bytes"
+#    # zfsexportsfile is {{ zfsexportsfile.stat.size }} bytes"
 #  when: exportsfile.stat.exists
 
 - name: Ensure nfs is running if exports files are bigger than 0 byte
-  service:
+  ansible.builtin.service:
     name: "{{ nfs_service_name }}"
     state: started
     enabled: yes
-  when: nfs_share_mounts is defined
-        or
-        exportsfile.stat.exists and exportsfile.stat.size > 0
-        or
-        sharetabfile.stat.exists and sharetabfile.stat.size > 0
+  when: nfs_share_mounts|length > 0
+    or
+    exportsfile.stat.exists and exportsfile.stat.size > 0
+    or
+    zfsexportsfile.stat.exists and zfsexportsfile.stat.size > 0
 
+# needs ansible-galaxy collection install ansible.posix
 - name: Mount NFS share(s)
   become: yes
-  mount:
+  ansible.posix.mount:
     fstype: nfs4
     name: "{{ item.path }}"
     opts: "{{ item.opts | default(nfs_mount_opts) }}"
@@ -48,9 +51,10 @@
   with_items: "{{ nfs_share_mounts }}"
 
 - name: Ensure that the NFS mount points exist
-  file:
-    path:  '{{ item.path }}'
+  ansible.builtin.file:
+    path: "{{ item.path }}"
     owner: '{{ item.owner | d("root") }}'
     group: '{{ item.group | d("root") }}'
-    state: 'directory'
+    # mode: # is set from original folder!?
+    state: "directory"
   with_items: "{{ nfs_share_mounts }}"
